@@ -2,11 +2,17 @@
 Structures here resemble OWASP® ZAP Traditional JSON Report,
 with or without Requests and Responses.
 Alerts are considered grouped by their info.
+
+Changes to the Traditional JSON Report format:
+- some fields renamed, keeping original names as aliases
+- timestamps are in ISO format, in UTC
+
+Some refs:
+- https://www.zaproxy.org/docs/constants/
 """
 
-
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 
 import dateutil.parser
 from pydantic import BaseModel, Field, validator
@@ -29,7 +35,7 @@ class ZapAlertInstance(BaseModel):
     response_body: str | None = Field(alias='response-body', repr=False)
 
     def json_orig(self):
-        return self.json(by_alias=True)
+        return self.json(by_alias=True, exclude_none=True, indent=4, ensure_ascii=False)
 
     class Config:
         allow_population_by_field_name = True
@@ -52,6 +58,7 @@ class ZapAlertInfo(BaseModel):
     wascid: int
     sourceid: int
     instances: list[ZapAlertInstance]
+    count: int | None
 
     @validator('description', 'solution', 'otherinfo', 'reference', pre=True)
     def clean_some_attrs(cls, v):
@@ -64,7 +71,7 @@ class ZapAlertInfo(BaseModel):
         return v or -1
 
     def json_orig(self):
-        return self.json(by_alias=True)
+        return self.json(by_alias=True, exclude_none=True, indent=4, ensure_ascii=False)
 
     class Config:
         allow_population_by_field_name = True
@@ -79,7 +86,7 @@ class ZapSite(BaseModel):
     alerts: list[ZapAlertInfo]
 
     def json_orig(self):
-        return self.json(by_alias=True)
+        return self.json(by_alias=True, exclude_none=True, indent=4, ensure_ascii=False)
 
     class Config:
         allow_population_by_field_name = True
@@ -91,16 +98,17 @@ class ZapReport(BaseModel):
 
     version: str = Field(default='x3',
         alias='@version')
-    generated_ts: datetime = Field(default_factory=lambda: datetime.now().ctime(),
+    generated_ts: datetime = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat(),
         alias='@generated')
     site: list[ZapSite] = Field(default_factory=list)
 
     @validator('generated_ts', pre=True)
     def parse_ts(cls, v):
-        return dateutil.parser.parse(v)
+        ts = dateutil.parser.parse(v)
+        return ts.replace(tzinfo=timezone.utc) if ts.tzinfo is None else ts
 
     def json_orig(self):
-        return self.json(by_alias=True)
+        return self.json(by_alias=True, exclude_none=True, indent=4, ensure_ascii=False)
 
     class Config:
         allow_population_by_field_name = True
@@ -110,10 +118,32 @@ class ZapReport(BaseModel):
 if __name__ == '__main__':
     import sys
     from pathlib import Path
-    zr = ZapReport.parse_file(
-        Path(sys.argv[1]).expanduser())
-    # dump only one alert and one its instance
-    zr.site[0].alerts = [zr.site[0].alerts.pop(),]
-    zr.site[0].alerts[0].instances = [zr.site[0].alerts[0].instances.pop(),]
-    print(zr.json_orig())
+
+    report_file = Path(sys.argv[1]).expanduser()
+
+    zr = ZapReport.parse_file(report_file)
+
+    # # dump only one alert and one its instance
+    # zr.site[0].alerts = [zr.site[0].alerts.pop(),]
+    # zr.site[0].alerts[0].instances = [zr.site[0].alerts[0].instances.pop(),]
+    # print(zr.json_orig())
+
+    while len(zr.site) > 1:
+        _ = zr.site.pop(0)
+
+    for a in zr.site[0].alerts:
+        for i in range(len(a.instances) - 1):
+            a.instances[i].request_header = ''
+            a.instances[i].request_body = ''
+            a.instances[i].response_header = ''
+            a.instances[i].response_body = ''
+
+    # Exclude some alerts
+    zr.site[0].alerts = list(filter(
+        lambda a: int(a.pluginid) not in (10096, 10027),
+        zr.site[0].alerts
+    ))
+
+    with open(report_file.with_stem(f'{report_file.stem}-m'), 'w') as fo:
+        fo.write(zr.json_orig())
 
