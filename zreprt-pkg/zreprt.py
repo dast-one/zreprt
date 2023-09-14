@@ -4,10 +4,13 @@ with or without Requests and Responses.
 Alerts are considered grouped by their info.
 
 Changes to the Traditional JSON Report format:
-- some fields renamed, keeping original names as aliases
-- timestamps are in ISO format, in UTC
+- some fields renamed, keeping original names as aliases;
+- some (re)typing: timestamps are ISO-formatted,
+    some int and bool instead of strings;
+- html tags are stripped from some fields containing descriptions.
 
-Some refs:
+See also:
+- https://www.zaproxy.org/docs/desktop/addons/report-generation/report-traditional-json/
 - https://www.zaproxy.org/docs/constants/
 """
 
@@ -15,104 +18,147 @@ import re
 from datetime import datetime, timezone
 
 import dateutil.parser
-from pydantic import BaseModel, Field, validator
+from attrs import define, field
+from cattrs import Converter
+from cattrs.gen import make_dict_structure_fn, make_dict_unstructure_fn, override
+from cattrs.preconf.json import make_converter
 
 
 def _clns(s, p=re.compile(r'</?p>')):
-    """Clean single string from extra html tags."""
+    """Clear single string of extra html tags."""
     return p.sub('', s)
 
 
-class ZapAlertInstance(BaseModel):
+_zlike_conv = make_converter()
+_zlike_conv.register_unstructure_hook(datetime, lambda dt: dt.isoformat())
+_zlike_conv.register_structure_hook(datetime, lambda s, _: ts if (ts:=dateutil.parser.parse(s)).tzinfo
+                                                             else ts.replace(tzinfo=timezone.utc))
+_zorig_conv = _zlike_conv.copy()
+
+
+def _fallback_field(
+    old_to_new_field: dict[str, str],
+    zap_like_report_converter: Converter = _zlike_conv,
+    zap_orig_report_converter: Converter = _zorig_conv,
+):
+    """Ref: https://catt.rs/en/stable/usage.html#using-fallback-key-names"""
+    def decorator(cls):
+        struct = make_dict_structure_fn(cls, zap_like_report_converter)
+        def structure(d, cl):
+            # if set(d.keys()) & set(old_to_new_field.keys()):
+            for old_field, new_field in old_to_new_field.items():
+                if old_field in d:
+                    d[new_field] = d[old_field]
+            return struct(d, cl)
+        zap_like_report_converter.register_structure_hook(cls, structure)
+
+        unstruct = make_dict_unstructure_fn(
+            cls,
+            zap_orig_report_converter,
+            **{
+                new_field: override(rename=old_field) for old_field, new_field in old_to_new_field.items()
+            },
+        )
+        zap_orig_report_converter.register_unstructure_hook(cls, unstruct)
+
+        return cls
+    return decorator
+
+
+@_fallback_field({
+    "request-header": "request_header",
+    "request-body": "request_body",
+    "response-header": "response_header",
+    "response-body": "response_body",
+})
+@define
+class ZapAlertInstance:
     uri: str
     method: str
     param: str
     attack: str
     evidence: str
-    request_header: str | None = Field(alias='request-header', repr=False)
-    request_body: str | None = Field(alias='request-body', repr=False)
-    response_header: str | None = Field(alias='response-header', repr=False)
-    response_body: str | None = Field(alias='response-body', repr=False)
-
-    def json_orig(self):
-        return self.json(by_alias=True, exclude_none=True, indent=4, ensure_ascii=False)
-
-    class Config:
-        allow_population_by_field_name = True
-        orm_mode = True
+    request_header: str | None = field(default=None, repr=False)
+    request_body: str | None = field(default=None, repr=False)
+    response_header: str | None = field(default=None, repr=False)
+    response_body: str | None = field(default=None, repr=False)
 
 
-class ZapAlertInfo(BaseModel):
+@_fallback_field({
+    "alertRef": "alertref",
+    "desc": "description",
+})
+@define
+class ZapAlertInfo:
     pluginid: int
-    alertref: str = Field(alias='alertRef')
+    alertref: str
     alert: str
     name: str
     riskcode: int
     confidence: int
     riskdesc: str
-    description: str = Field(alias='desc')
-    solution: str
-    otherinfo: str
-    reference: str
-    cweid: int
-    wascid: int
-    sourceid: int
+    description: str = field(converter=_clns)
+    solution: str = field(converter=_clns)
+    otherinfo: str = field(converter=_clns)
+    reference: str = field(converter=_clns)
+    cweid: int = field(converter=lambda v: v or -1)
+    wascid: int = field(converter=lambda v: v or -1)
+    sourceid: int = field(converter=lambda v: v or -1)
     instances: list[ZapAlertInstance]
-    count: int | None
+    count: int | None = None
 
-    @validator('description', 'solution', 'otherinfo', 'reference', pre=True)
-    def clean_some_attrs(cls, v):
-        """Clean single string from extra html tags."""
-        return _clns(v)
+    # @field_validator('description', 'solution', 'otherinfo', 'reference', mode='before')
+    # def clean_some_attrs(cls, v):
+    #     """Clear single string of extra html tags."""
+    #     return _clns(v)
 
-    @validator('cweid', 'wascid', 'sourceid', pre=True)
-    def empty_to_none(cls, v):
-        """Empty str -> -1 (backward compatibility)."""
-        return v or -1
-
-    def json_orig(self):
-        return self.json(by_alias=True, exclude_none=True, indent=4, ensure_ascii=False)
-
-    class Config:
-        allow_population_by_field_name = True
-        orm_mode = True
+    # @field_validator('cweid', 'wascid', 'sourceid', mode='before')
+    # def empty_to_none(cls, v):
+    #     """Empty str -> -1 (backward compatibility)."""
+    #     return v or -1
 
 
-class ZapSite(BaseModel):
-    name: str = Field(alias='@name')
-    host: str = Field(alias='@host')
-    port: str = Field(alias='@port')
-    ssl: bool = Field(alias='@ssl')
+@_fallback_field({
+    "@name": "name",
+    "@host": "host",
+    "@port": "port",
+    "@ssl": "ssl",
+})
+@define
+class ZapSite:
+    name: str
+    host: str
+    port: str
+    ssl: bool
     alerts: list[ZapAlertInfo]
 
-    def json_orig(self):
-        return self.json(by_alias=True, exclude_none=True, indent=4, ensure_ascii=False)
 
-    class Config:
-        allow_population_by_field_name = True
-        orm_mode = True
-
-
-class ZapReport(BaseModel):
+@_fallback_field({
+    "@version": "version",
+    "@generated": "generated_ts",
+})
+@define
+class ZapReport:
     """Represents ZAP Traditional JSON Report."""
 
-    version: str = Field(default='x3',
-        alias='@version')
-    generated_ts: datetime = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat(),
-        alias='@generated')
-    site: list[ZapSite] = Field(default_factory=list)
+    version: str = field(default='x3')
+    generated_ts: datetime = field(factory=lambda: datetime.now(timezone.utc))
+    site: list[ZapSite] = field(factory=list)
 
-    @validator('generated_ts', pre=True)
-    def parse_ts(cls, v):
-        ts = dateutil.parser.parse(v)
-        return ts.replace(tzinfo=timezone.utc) if ts.tzinfo is None else ts
+    @classmethod
+    def from_json_file(cls, f):
+        with open(f) as fo:
+            return _zlike_conv.loads(fo.read(), cls)
+
+    @classmethod
+    def from_dict(cls, d):
+        return _zlike_conv.structure(d, cls)
+
+    def json(self):
+        return _zlike_conv.dumps(self, indent=4, ensure_ascii=False)
 
     def json_orig(self):
-        return self.json(by_alias=True, exclude_none=True, indent=4, ensure_ascii=False)
-
-    class Config:
-        allow_population_by_field_name = True
-        orm_mode = True
+        return _zorig_conv.dumps(self, indent=4, ensure_ascii=False)
 
 
 if __name__ == '__main__':
@@ -121,7 +167,7 @@ if __name__ == '__main__':
 
     report_file = Path(sys.argv[1]).expanduser()
 
-    zr = ZapReport.parse_file(report_file)
+    zr = ZapReport.from_json_file(report_file)
 
     # # dump only one alert and one its instance
     # zr.site[0].alerts = [zr.site[0].alerts.pop(),]
@@ -146,4 +192,3 @@ if __name__ == '__main__':
 
     with open(report_file.with_stem(f'{report_file.stem}-m'), 'w') as fo:
         fo.write(zr.json_orig())
-
