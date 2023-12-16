@@ -3,6 +3,7 @@
 __all__ = [
     'ZapReport', 'ZapSite', 'ZapAlertInfo', 'ZapAlertInstance',
 ]
+__version__ = '0.2'
 
 import sys
 
