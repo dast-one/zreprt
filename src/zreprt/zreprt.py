@@ -15,6 +15,7 @@ See also:
 """
 
 import re
+from typing import Optional
 from datetime import datetime, timezone
 
 import dateutil.parser
@@ -80,10 +81,10 @@ class ZapAlertInstance:
     param: str
     attack: str
     evidence: str
-    request_header: str | None = field(default=None, repr=False)
-    request_body: str | None = field(default=None, repr=False)
-    response_header: str | None = field(default=None, repr=False)
-    response_body: str | None = field(default=None, repr=False)
+    request_header: Optional[str] = field(default=None, repr=False)
+    request_body: Optional[str] = field(default=None, repr=False)
+    response_header: Optional[str] = field(default=None, repr=False)
+    response_body: Optional[str] = field(default=None, repr=False)
 
 
 @_fallback_field({
@@ -107,7 +108,7 @@ class ZapAlertInfo:
     wascid: int = field(converter=lambda v: v or -1)
     sourceid: int = field(converter=lambda v: v or -1)
     instances: list[ZapAlertInstance]
-    count: int | None = None
+    count: Optional[int] = None
 
     # @field_validator('description', 'solution', 'otherinfo', 'reference', mode='before')
     # def clean_some_attrs(cls, v):
