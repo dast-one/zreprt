@@ -136,6 +136,7 @@ class ZapSite:
 
 
 @_fallback_field({
+    "@programName": "program_name",
     "@version": "version",
     "@generated": "generated_ts",
 })
@@ -143,6 +144,7 @@ class ZapSite:
 class ZapReport:
     """Represents ZAP Traditional JSON Report."""
 
+    program_name: str = ''
     version: str = field(default='x3')
     generated_ts: datetime = field(factory=lambda: datetime.now(timezone.utc))
     site: list[ZapSite] = field(factory=list)
