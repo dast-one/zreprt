@@ -15,8 +15,9 @@ See also:
 """
 
 import re
-from typing import Optional
 from datetime import datetime, timezone
+from io import TextIOWrapper
+from typing import Optional
 
 import dateutil.parser
 from attrs import define, field
@@ -152,7 +153,7 @@ class ZapReport:
 
     @classmethod
     def from_json_file(cls, f):
-        with open(f) as fo:
+        with (f if isinstance(f, TextIOWrapper) else open(f)) as fo:
             return _zlike_conv.loads(fo.read(), cls)
 
     @classmethod

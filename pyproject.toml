@@ -40,8 +40,8 @@ dependencies = [
 # Issues = "https://github.com/me/spam/issues"
 # Changelog = "https://github.com/me/spam/blob/master/CHANGELOG.md"
 
-# [project.scripts]
-# zreprt-cli = "spam:main_cli"
+[project.scripts]
+zreprt = "zreprt.__main__:main"
 
 [tool.hatch.version]
 path = "src/zreprt/__init__.py"
