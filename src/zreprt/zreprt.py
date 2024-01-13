@@ -16,6 +16,8 @@ See also:
 
 import re
 from datetime import datetime, timezone
+from io import TextIOWrapper
+from typing import Optional
 
 import dateutil.parser
 from attrs import define, field
@@ -31,8 +33,8 @@ def _clns(s, p=re.compile(r'</?p>')):
 
 _zlike_conv = make_converter()
 _zlike_conv.register_unstructure_hook(datetime, lambda dt: dt.isoformat())
-_zlike_conv.register_structure_hook(datetime, lambda s, _: ts if (ts:=dateutil.parser.parse(s)).tzinfo
-                                                             else ts.replace(tzinfo=timezone.utc))
+_zlike_conv.register_structure_hook(datetime, lambda s, _: ts if (ts := dateutil.parser.parse(s)).tzinfo
+                                                              else ts.replace(tzinfo=timezone.utc))
 _zorig_conv = _zlike_conv.copy()
 
 
@@ -44,12 +46,14 @@ def _fallback_field(
     """Ref: https://catt.rs/en/stable/usage.html#using-fallback-key-names"""
     def decorator(cls):
         struct = make_dict_structure_fn(cls, zap_like_report_converter)
+
         def structure(d, cl):
             # if set(d.keys()) & set(old_to_new_field.keys()):
             for old_field, new_field in old_to_new_field.items():
                 if old_field in d:
                     d[new_field] = d[old_field]
             return struct(d, cl)
+
         zap_like_report_converter.register_structure_hook(cls, structure)
 
         unstruct = make_dict_unstructure_fn(
@@ -78,10 +82,10 @@ class ZapAlertInstance:
     param: str
     attack: str
     evidence: str
-    request_header: str | None = field(default=None, repr=False)
-    request_body: str | None = field(default=None, repr=False)
-    response_header: str | None = field(default=None, repr=False)
-    response_body: str | None = field(default=None, repr=False)
+    request_header: Optional[str] = field(default=None, repr=False)
+    request_body: Optional[str] = field(default=None, repr=False)
+    response_header: Optional[str] = field(default=None, repr=False)
+    response_body: Optional[str] = field(default=None, repr=False)
 
 
 @_fallback_field({
@@ -105,17 +109,7 @@ class ZapAlertInfo:
     wascid: int = field(converter=lambda v: v or -1)
     sourceid: int = field(converter=lambda v: v or -1)
     instances: list[ZapAlertInstance]
-    count: int | None = None
-
-    # @field_validator('description', 'solution', 'otherinfo', 'reference', mode='before')
-    # def clean_some_attrs(cls, v):
-    #     """Clear single string of extra html tags."""
-    #     return _clns(v)
-
-    # @field_validator('cweid', 'wascid', 'sourceid', mode='before')
-    # def empty_to_none(cls, v):
-    #     """Empty str -> -1 (backward compatibility)."""
-    #     return v or -1
+    count: Optional[int] = None
 
 
 @_fallback_field({
@@ -134,6 +128,7 @@ class ZapSite:
 
 
 @_fallback_field({
+    "@programName": "program_name",
     "@version": "version",
     "@generated": "generated_ts",
 })
@@ -141,13 +136,14 @@ class ZapSite:
 class ZapReport:
     """Represents ZAP Traditional JSON Report."""
 
+    program_name: str = ''
     version: str = field(default='x3')
     generated_ts: datetime = field(factory=lambda: datetime.now(timezone.utc))
     site: list[ZapSite] = field(factory=list)
 
     @classmethod
     def from_json_file(cls, f):
-        with open(f) as fo:
+        with (f if isinstance(f, TextIOWrapper) else open(f)) as fo:
             return _zlike_conv.loads(fo.read(), cls)
 
     @classmethod
@@ -159,36 +155,3 @@ class ZapReport:
 
     def json_orig(self):
         return _zorig_conv.dumps(self, indent=4, ensure_ascii=False)
-
-
-if __name__ == '__main__':
-    import sys
-    from pathlib import Path
-
-    report_file = Path(sys.argv[1]).expanduser()
-
-    zr = ZapReport.from_json_file(report_file)
-
-    # # dump only one alert and one its instance
-    # zr.site[0].alerts = [zr.site[0].alerts.pop(),]
-    # zr.site[0].alerts[0].instances = [zr.site[0].alerts[0].instances.pop(),]
-    # print(zr.json_orig())
-
-    while len(zr.site) > 1:
-        _ = zr.site.pop(0)
-
-    for a in zr.site[0].alerts:
-        for i in range(len(a.instances) - 1):
-            a.instances[i].request_header = ''
-            a.instances[i].request_body = ''
-            a.instances[i].response_header = ''
-            a.instances[i].response_body = ''
-
-    # Exclude some alerts
-    zr.site[0].alerts = list(filter(
-        lambda a: int(a.pluginid) not in (10096, 10027),
-        zr.site[0].alerts
-    ))
-
-    with open(report_file.with_stem(f'{report_file.stem}-m'), 'w') as fo:
-        fo.write(zr.json_orig())
