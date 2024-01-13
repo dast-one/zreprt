@@ -6,24 +6,21 @@ build-backend = "hatchling.build"
 name = "zreprt"
 description = "ZAP-like reporting library"
 readme = "README.md"
-# https://choosealicense.com/
 license = {file = "LICENSE"}
-keywords = ["zap", "report"]
+keywords = ["zap", "report", "reporting"]
 
 dynamic = ["version"]
 
-# authors = [
-#   { name="Vital A Pi", email="code@vp.ag" },
-# ]
-# maintainers = [
-#   { name="Vital A Pi", email="code@vp.ag" },
-# ]
-# # https://pypi.org/classifiers
-# classifiers = [
-#     "Programming Language :: Python :: 3",
-#     "License :: OSI Approved :: MIT License",
-#     "Operating System :: OS Independent",
-# ]
+authors = [
+  { name="Vital A Pi", email="code@vp.ag" },
+]
+
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+]
 
 requires-python = ">=3.9"
 
@@ -33,12 +30,11 @@ dependencies = [
   "python-dateutil",
 ]
 
-# [project.urls]
-# Homepage = "https://example.com"
-# Documentation = "https://readthedocs.org"
-# Repository = "https://github.com/me/spam.git"
-# Issues = "https://github.com/me/spam/issues"
-# Changelog = "https://github.com/me/spam/blob/master/CHANGELOG.md"
+[project.urls]
+# Homepage = "https://github.com/dast-one/zreprt"
+# Documentation = "https://github.com/dast-one/zreprt#readme"
+Issues = "https://github.com/dast-one/zreprt/issues"
+Source = "https://github.com/dast-one/zreprt"
 
 [project.scripts]
 zreprt = "zreprt.__main__:main"

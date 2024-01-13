@@ -111,16 +111,6 @@ class ZapAlertInfo:
     instances: list[ZapAlertInstance]
     count: Optional[int] = None
 
-    # @field_validator('description', 'solution', 'otherinfo', 'reference', mode='before')
-    # def clean_some_attrs(cls, v):
-    #     """Clear single string of extra html tags."""
-    #     return _clns(v)
-
-    # @field_validator('cweid', 'wascid', 'sourceid', mode='before')
-    # def empty_to_none(cls, v):
-    #     """Empty str -> -1 (backward compatibility)."""
-    #     return v or -1
-
 
 @_fallback_field({
     "@name": "name",

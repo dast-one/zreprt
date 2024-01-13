@@ -25,19 +25,11 @@ def main():
     parser.add_argument(
         '-o', '--out_file',
         type=argparse.FileType('w'),
-        # default=sys.stdout,
         default=None,
         help='Output file to write ZAP[-like] report to.'
              ' Defaults to STDOUT when reading from STDIN,'
              ' and to "<filename>-m.<ext>" when "<filename>.<ext>" specified as input.'
     )
-    # parser.add_argument(
-    #     '--format',
-    #     type=str.lower,
-    #     choices=['original', 'd1-zap-like'],
-    #     default='d1-zap-like',
-    #     help='Output format.',
-    # )
     parser.add_argument(
         '-z', '--zap-original-format', '--zap_original_format',
         action='store_true',
@@ -46,12 +38,6 @@ def main():
     args = parser.parse_args()
 
     zr = ZapReport.from_json_file(args.in_file)
-
-    # # dump only one alert and one its instance
-    # # TODO: Parametrize this
-    # zr.site[0].alerts = [zr.site[0].alerts.pop(),]
-    # zr.site[0].alerts[0].instances = [zr.site[0].alerts[0].instances.pop(),]
-    # print(zr.json_orig())
 
     while len(zr.site) > 1:
         _ = zr.site.pop(0)
