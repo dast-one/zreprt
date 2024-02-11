@@ -20,7 +20,7 @@ from io import TextIOWrapper
 from typing import Optional
 
 import dateutil.parser
-from attrs import define, field
+from attrs import astuple, define, field
 from cattrs import Converter
 from cattrs.gen import make_dict_structure_fn, make_dict_unstructure_fn, override
 from cattrs.preconf.json import make_converter
@@ -75,7 +75,7 @@ def _fallback_field(
     "response-header": "response_header",
     "response-body": "response_body",
 })
-@define
+@define(order=True)
 class ZapAlertInstance:
     uri: str
     method: str
@@ -86,6 +86,9 @@ class ZapAlertInstance:
     request_body: Optional[str] = field(default=None, repr=False)
     response_header: Optional[str] = field(default=None, repr=False)
     response_body: Optional[str] = field(default=None, repr=False)
+
+    def __hash__(self):
+        return hash(astuple(self))
 
 
 @_fallback_field({
