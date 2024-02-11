@@ -82,6 +82,7 @@ class ZapAlertInstance:
     param: str
     attack: str
     evidence: str
+    otherinfo: Optional[str] = ''
     request_header: Optional[str] = field(default=None, repr=False)
     request_body: Optional[str] = field(default=None, repr=False)
     response_header: Optional[str] = field(default=None, repr=False)
@@ -113,6 +114,7 @@ class ZapAlertInfo:
     sourceid: int = field(converter=lambda v: v or -1)
     instances: list[ZapAlertInstance]
     count: Optional[int] = None
+    tags: Optional[list] = field(factory=list)
 
 
 @_fallback_field({
