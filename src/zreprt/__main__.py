@@ -53,9 +53,12 @@ def main():
              ' except the last one within each alert.'
     )
     parser.add_argument(
-        '-z', '--zap-original-format', '--zap_original_format',
+        '-z', '--zap-original-output', '--zap_original_output',
         action='store_true',
-        help='Use ZAP original JSON output. Defaults to False, causing ZAP-like output.',
+        help='Use ZAP original field naming in JSON output, trying to resemble `traditional-json-plus`. Defaults to False, causing our ZAP-like output.'
+             ' WARN: Mind some irreversible transformations performed:'
+             ' HTML-tags removed from some fields;'
+             ' some fields casted to int.'
     )
     args = parser.parse_args()
 
@@ -112,7 +115,7 @@ def main():
             output_file = first_input_file.with_stem(f'{first_input_file.stem}-m')
 
     with (output_file if isinstance(output_file, TextIOWrapper) else open(output_file, 'w')) as fo:
-        fo.write(zr_merged.json_orig() if args.zap_original_format else zr_merged.json())
+        fo.write(zr_merged.json_orig() if args.zap_original_output else zr_merged.json())
 
 
 if __name__ == '__main__':
