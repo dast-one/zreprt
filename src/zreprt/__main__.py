@@ -10,11 +10,9 @@ from itertools import chain, groupby
 from . import ZapReport
 
 
-DEFAULT_ALERTS_EXCLUDED = (
-    10096,  # Timestamp Disclosure
-    10027,  # Information Disclosure - Suspicious Comments
+DEFAULT_ALERTS_EXCLUDED = [
     10109,  # Modern Web Application
-)
+]
 
 
 def main():
