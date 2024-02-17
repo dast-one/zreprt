@@ -87,7 +87,7 @@ def main():
             ais[i].request_body = ''
             ais[i].response_header = ''
             ais[i].response_body = ''
-        new_alert = evolve(agrp[0], instances=ais)
+        new_alert = evolve(agrp[0], instances=ais, count=len(ais))
         zr_merged.site[0].alerts.append(new_alert)
 
     output_file = args.out_file
