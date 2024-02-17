@@ -49,6 +49,12 @@ def main():
              f' Use of this option overrides the default {DEFAULT_ALERTS_EXCLUDED}.'
     )
     parser.add_argument(
+        '-k', '--keep-data-full', '--keep_data_full',
+        action='store_true',
+        help='Skip the default clearing request-response for alert instances,'
+             ' except the last one within each alert.'
+    )
+    parser.add_argument(
         '-z', '--zap-original-format', '--zap_original_format',
         action='store_true',
         help='Use ZAP original JSON output. Defaults to False, causing ZAP-like output.',
@@ -81,12 +87,21 @@ def main():
     kf = lambda a: (-int(a.riskcode), a.pluginid, a.alert, a.name, a.otherinfo)
     for _gk, agrp in groupby(sorted((a for zr in zrs for a in zr.site[0].alerts), key=kf), key=kf):
         agrp = list(agrp)
-        ais = sorted(set(chain.from_iterable(a.instances for a in agrp)))
-        for i in range(len(ais) - 1):
-            ais[i].request_header = ''
-            ais[i].request_body = ''
-            ais[i].response_header = ''
-            ais[i].response_body = ''
+        ais = sorted(
+            set(chain.from_iterable(a.instances for a in agrp)),
+            # Keep alert instances with non-empty request/response in the end, to be consistent with further clearing
+            key=lambda ai: (
+                bool(ai.request_header or ai.request_body or ai.response_header or ai.response_body),
+                ai,
+            )
+        )
+        if not args.keep_data_full:
+            # Clear the request/response for all but the last one
+            for i in range(len(ais) - 1):
+                ais[i].request_header = ''
+                ais[i].request_body = ''
+                ais[i].response_header = ''
+                ais[i].response_body = ''
         new_alert = evolve(agrp[0], instances=ais, count=len(ais))
         zr_merged.site[0].alerts.append(new_alert)
 
