@@ -20,7 +20,7 @@ from io import TextIOWrapper
 from typing import Optional
 
 import dateutil.parser
-from attrs import define, field
+from attrs import astuple, define, field
 from cattrs import Converter
 from cattrs.gen import make_dict_structure_fn, make_dict_unstructure_fn, override
 from cattrs.preconf.json import make_converter
@@ -32,7 +32,7 @@ def _clns(s, p=re.compile(r'</?p>')):
 
 
 _zlike_conv = make_converter()
-_zlike_conv.register_unstructure_hook(datetime, lambda dt: dt.isoformat())
+# _zlike_conv.register_unstructure_hook(datetime, lambda dt: dt.isoformat())  # cattrs.preconf.json does this
 _zlike_conv.register_structure_hook(datetime, lambda s, _: ts if (ts := dateutil.parser.parse(s)).tzinfo
                                                               else ts.replace(tzinfo=timezone.utc))
 _zorig_conv = _zlike_conv.copy()
@@ -75,17 +75,21 @@ def _fallback_field(
     "response-header": "response_header",
     "response-body": "response_body",
 })
-@define
+@define(order=True)
 class ZapAlertInstance:
     uri: str
     method: str
     param: str
     attack: str
     evidence: str
+    otherinfo: Optional[str] = ''
     request_header: Optional[str] = field(default=None, repr=False)
     request_body: Optional[str] = field(default=None, repr=False)
     response_header: Optional[str] = field(default=None, repr=False)
     response_body: Optional[str] = field(default=None, repr=False)
+
+    def __hash__(self):
+        return hash(astuple(self))
 
 
 @_fallback_field({
@@ -110,6 +114,7 @@ class ZapAlertInfo:
     sourceid: int = field(converter=lambda v: v or -1)
     instances: list[ZapAlertInstance]
     count: Optional[int] = None
+    tags: Optional[list] = field(factory=list)
 
 
 @_fallback_field({
