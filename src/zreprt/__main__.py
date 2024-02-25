@@ -55,7 +55,8 @@ def main():
     parser.add_argument(
         '-z', '--zap-original-output', '--zap_original_output',
         action='store_true',
-        help='Use ZAP original field naming in JSON output, trying to resemble `traditional-json-plus`. Defaults to False, causing our ZAP-like output.'
+        help='Use ZAP original field naming in JSON output, trying to resemble `traditional-json-plus`.'
+             ' Defaults to False, causing our ZAP-like output.'
              ' WARN: Mind some irreversible transformations performed:'
              ' HTML-tags removed from some fields;'
              ' some fields casted to int.'
@@ -85,7 +86,7 @@ def main():
             alerts=list(),
         ),]
     )
-    kf = lambda a: (-int(a.riskcode), a.pluginid, a.alert, a.name, a.otherinfo)
+    kf = lambda a: (-int(a.riskcode), a.pluginid, a.alert, a.name, a.otherinfo)  # noqa: E731
     for _gk, agrp in groupby(sorted((a for zr in zrs for a in zr.site[0].alerts), key=kf), key=kf):
         agrp = list(agrp)
         ais = sorted(
