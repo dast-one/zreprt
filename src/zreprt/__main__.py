@@ -8,6 +8,7 @@ from pathlib import Path
 from itertools import chain, groupby
 
 from . import ZapReport
+from .zr2sarif import transmodel
 
 
 DEFAULT_ALERTS_EXCLUDED = [
@@ -99,7 +100,8 @@ def main():
         help='Skip the default clearing request-response for alert instances,'
              ' except the last one within each alert.'
     )
-    parser.add_argument(
+    parser_output_args = parser.add_mutually_exclusive_group(required=False)
+    parser_output_args.add_argument(
         '-z', '--zap-original-output', '--zap_original_output',
         action='store_true',
         help='Use ZAP original field naming in JSON output, trying to resemble `traditional-json-plus`.'
@@ -107,6 +109,11 @@ def main():
              ' WARN: Mind some irreversible transformations performed:'
              ' HTML-tags removed from some fields;'
              ' some fields casted to int.'
+    )
+    parser_output_args.add_argument(
+        '-s', '--sarif-output', '--sarif_output',
+        action='store_true',
+        help='Produce OASIS SARIF (JSON) output.'
     )
     args = parser.parse_args()
 
@@ -126,7 +133,10 @@ def main():
             output_file = first_input_file.with_stem(f'{first_input_file.stem}-m')
 
     with (output_file if isinstance(output_file, TextIOWrapper) else open(output_file, 'w')) as fo:
-        fo.write(zr_merged.json_orig() if args.zap_original_output else zr_merged.json())
+        if args.sarif_output:
+            fo.write(transmodel(zr_merged).json())
+        else:
+            fo.write(zr_merged.json_orig() if args.zap_original_output else zr_merged.json())
 
 
 if __name__ == '__main__':

@@ -73,6 +73,27 @@ conv.register_structure_hook_factory(
 )
 
 
+@define
+class ZreprtExtraInfo:
+    """Extra messages to be included as properties, when needed,
+    e.g. error/exception info."""
+    zreprt_msgs: list[str] = field(factory=list)
+    extras: dict = field(factory=dict)
+
+    def add(self, msg, d=dict(), **kwargs):
+        self.zreprt_msgs.append(msg)
+        self.extras.update(d)
+        self.extras.update(kwargs)
+
+    def asdict(self):
+        return {
+            '_zreprt_msg': ';\n'.join(map(str, self.zreprt_msgs)),
+            **self.extras,
+        }
+
+conv.register_unstructure_hook(ZreprtExtraInfo, lambda ze: ze.asdict())
+
+
 # ---------------------------------------------------------------------
 # Here go the SARIF object model (re)definitions
 #
