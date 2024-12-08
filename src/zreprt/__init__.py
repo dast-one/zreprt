@@ -2,12 +2,9 @@
 
 __all__ = [
     'ZapReport', 'ZapSite', 'ZapAlertInfo', 'ZapAlertInstance',
+    'SarifLog',
 ]
 __version__ = '0.3.1'
 
-import sys
-
-if sys.version_info.minor < 3 or sys.version_info.minor < 9:
-    raise Exception('Python >= 3.9 please.')
-
+from .sarif_om import SarifLog
 from .zreprt import ZapReport, ZapSite, ZapAlertInfo, ZapAlertInstance

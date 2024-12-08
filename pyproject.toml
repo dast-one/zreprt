@@ -28,6 +28,7 @@ dependencies = [
   "attrs",
   "cattrs",
   "python-dateutil",
+  "sarif-om",
 ]
 
 [project.optional-dependencies]
