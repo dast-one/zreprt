@@ -15,6 +15,53 @@ DEFAULT_ALERTS_EXCLUDED = [
 ]
 
 
+def preprocess(zr, exclude_alerts=DEFAULT_ALERTS_EXCLUDED):
+    while len(zr.site) > 1:
+        _ = zr.site.pop(0)
+
+    # Exclude some alerts
+    zr.site[0].alerts = list(filter(
+        lambda a: int(a.pluginid) not in exclude_alerts,
+        zr.site[0].alerts
+    ))
+
+    return zr
+
+
+def merge(zrs, trim=False):
+    zr_merged = evolve(
+        zrs[0],
+        **({'program_name': '(combo)', 'version': ''} if len(zrs) > 1 else {}),
+        site=[evolve(
+            zrs[0].site[0],
+            alerts=list(),
+        ),]
+    )
+
+    kf = lambda a: (-int(a.riskcode), a.pluginid, a.alert, a.name, a.otherinfo)  # noqa: E731
+    for _gk, agrp in groupby(sorted((a for zr in zrs for a in zr.site[0].alerts), key=kf), key=kf):
+        agrp = list(agrp)
+        ais = sorted(
+            set(chain.from_iterable(a.instances for a in agrp)),
+            # Keep alert instances with non-empty request/response in the end, to be consistent with further clearing
+            key=lambda ai: (
+                bool(ai.request_header or ai.request_body or ai.response_header or ai.response_body),
+                ai,
+            )
+        )
+        if trim:
+            # Clear the request/response for all but the last one
+            for i in range(len(ais) - 1):
+                ais[i].request_header = ''
+                ais[i].request_body = ''
+                ais[i].response_header = ''
+                ais[i].response_body = ''
+        new_alert = evolve(agrp[0], instances=ais, count=len(ais))
+        zr_merged.site[0].alerts.append(new_alert)
+
+    return zr_merged
+
+
 def main():
     """This callable is for more CLI-friendliness;
     ref: `project.scripts` at `pyproject.toml`."""
@@ -63,49 +110,12 @@ def main():
     )
     args = parser.parse_args()
 
-    zrs = list()
-    for input_file in args.in_file:
-        zr = ZapReport.from_json_file(input_file)
+    zrs = [
+        preprocess(zr, exclude_alerts=args.x or DEFAULT_ALERTS_EXCLUDED)
+        for zr in map(ZapReport.from_json_file, args.in_file)
+    ]
 
-        while len(zr.site) > 1:
-            _ = zr.site.pop(0)
-
-        # Exclude some alerts
-        zr.site[0].alerts = list(filter(
-            lambda a: int(a.pluginid) not in (args.x or DEFAULT_ALERTS_EXCLUDED),
-            zr.site[0].alerts
-        ))
-
-        zrs.append(zr)
-
-    zr_merged = evolve(
-        zrs[0],
-        **({'program_name': '(combo)', 'version': ''} if len(zrs) > 1 else {}),
-        site=[evolve(
-            zrs[0].site[0],
-            alerts=list(),
-        ),]
-    )
-    kf = lambda a: (-int(a.riskcode), a.pluginid, a.alert, a.name, a.otherinfo)  # noqa: E731
-    for _gk, agrp in groupby(sorted((a for zr in zrs for a in zr.site[0].alerts), key=kf), key=kf):
-        agrp = list(agrp)
-        ais = sorted(
-            set(chain.from_iterable(a.instances for a in agrp)),
-            # Keep alert instances with non-empty request/response in the end, to be consistent with further clearing
-            key=lambda ai: (
-                bool(ai.request_header or ai.request_body or ai.response_header or ai.response_body),
-                ai,
-            )
-        )
-        if not args.keep_data_full:
-            # Clear the request/response for all but the last one
-            for i in range(len(ais) - 1):
-                ais[i].request_header = ''
-                ais[i].request_body = ''
-                ais[i].response_header = ''
-                ais[i].response_body = ''
-        new_alert = evolve(agrp[0], instances=ais, count=len(ais))
-        zr_merged.site[0].alerts.append(new_alert)
+    zr_merged = merge(zrs, trim=not args.keep_data_full)
 
     output_file = args.out_file
     if output_file is None:

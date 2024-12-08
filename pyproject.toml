@@ -30,6 +30,12 @@ dependencies = [
   "python-dateutil",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "hypothesis",
+]
+
 [project.urls]
 # Homepage = "https://github.com/dast-one/zreprt"
 # Documentation = "https://github.com/dast-one/zreprt#readme"
