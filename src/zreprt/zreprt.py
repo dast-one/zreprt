@@ -31,10 +31,10 @@ def _clns(s, p=re.compile(r'</?p>')):
     return p.sub('', s)
 
 
-_zlike_conv = make_converter()
+_zlike_conv = make_converter(prefer_attrib_converters=True)
 # _zlike_conv.register_unstructure_hook(datetime, lambda dt: dt.isoformat())  # cattrs.preconf.json does this
 _zlike_conv.register_structure_hook(datetime, lambda s, _: ts if (ts := dateutil.parser.parse(s)).tzinfo
-                                                              else ts.replace(tzinfo=timezone.utc))
+                                                              else ts.replace(tzinfo=timezone.utc))  # noqa: E127
 _zorig_conv = _zlike_conv.copy()
 
 
