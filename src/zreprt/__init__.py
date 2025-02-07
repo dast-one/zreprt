@@ -4,7 +4,7 @@ __all__ = [
     'ZapReport', 'ZapSite', 'ZapAlertInfo', 'ZapAlertInstance',
     'SarifLog',
 ]
-__version__ = '0.3.1'
+__version__ = '0.4'
 
 from .sarif_om import SarifLog
 from .zreprt import ZapReport, ZapSite, ZapAlertInfo, ZapAlertInstance
