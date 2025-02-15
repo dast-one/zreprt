@@ -34,7 +34,7 @@ def ALERT_LEVEL_NORM(x):
 
 
 REQUEST_LINE_P = re.compile(r'^(\w+) (.*) (\S+)')  # <method> <request-target> <protocol>
-RESPONSE_LINE_P = re.compile(r'^(\S+) (\w+) (\w+)')  # <protocol> <status-code> <status-text>
+RESPONSE_LINE_P = re.compile(r'^(\S+) (\w+) (\w+)?')  # <protocol> <status-code> <status-text>
 
 
 # To be removed after
