@@ -3,7 +3,8 @@
 import logging
 import re
 from collections import Counter
-from datetime import datetime, UTC
+from datetime import datetime, timezone
+# from datetime import datetime, UTC  # `UTC` Added in 3.11
 
 from attrs import define, field
 
@@ -140,7 +141,8 @@ def _web_response(zhdr, zbody, no_response=False):
 
 
 def transmodel(zr):
-    ts0 = datetime.now(UTC).isoformat()
+    ts0 = datetime.now(timezone.utc).isoformat()
+    # ts0 = datetime.now(UTC).isoformat()  # `UTC` Added in 3.11
 
     rules = [
         ReportingDescriptor(
@@ -204,7 +206,8 @@ def transmodel(zr):
 
     # WARN: Order matters: Conversion summary should be constructed
     # after other entities, since it includes the notifications log.
-    ts1 = datetime.now(UTC).isoformat()
+    ts1 = datetime.now(timezone.utc).isoformat()
+    # ts1 = datetime.now(UTC).isoformat()  # `UTC` Added in 3.11
     conv_info = Conversion(
         tool=_THIS_TOOL_COMPONENT,
         invocation=Invocation(

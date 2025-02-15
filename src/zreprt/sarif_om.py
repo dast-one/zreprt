@@ -6,6 +6,7 @@ This module adds typing annotations for convenience with cattrs-structuring.
 
 import sys
 from io import TextIOWrapper
+from typing import Optional
 
 from attrs import define, field, fields, has
 from cattrs import BaseValidationError, transform_error
@@ -109,18 +110,18 @@ conv.register_unstructure_hook(ZreprtExtraInfo, lambda ze: ze.asdict())
 
 @define(field_transformer=_combine)
 class ToolComponent:
-    full_description: MultiformatMessageString | None
-    short_description: MultiformatMessageString | None
-    taxa: list[ReportingDescriptor] | None
+    full_description: Optional[MultiformatMessageString]
+    short_description: Optional[MultiformatMessageString]
+    taxa: Optional[list[ReportingDescriptor]]
 
 
 @_pretty_repr
 @define(field_transformer=_combine)
 class PhysicalLocation:
-    address: Address | None  # WARN: "anyOf" (address, artifact_location) is required
-    artifact_location: ArtifactLocation | None  # WARN: "anyOf" (address, artifact_location) is required
-    context_region: Region | None
-    region: Region | None
+    address: Optional[Address]  # WARN: "anyOf" (address, artifact_location) is required
+    artifact_location: Optional[ArtifactLocation]  # WARN: "anyOf" (address, artifact_location) is required
+    context_region: Optional[Region]
+    region: Optional[Region]
 
     def prepr(self):
         loc = (
@@ -134,8 +135,8 @@ class PhysicalLocation:
 @_pretty_repr
 @define(field_transformer=_combine)
 class Location:
-    message: Message | None
-    physical_location: PhysicalLocation | None
+    message: Optional[Message]
+    physical_location: Optional[PhysicalLocation]
 
     def prepr(self):
         return repr(self.physical_location) if self.physical_location else 'Location(WARN_Empty_PRETTY_REPR)'
@@ -144,12 +145,12 @@ class Location:
 @_pretty_repr
 @define(field_transformer=_combine)
 class Result:
-    analysis_target: ArtifactLocation | None
-    locations: list[Location] | None
+    analysis_target: Optional[ArtifactLocation]
+    locations: Optional[list[Location]]
     message: Message
-    rule: ReportingDescriptorReference | None
-    web_request: WebRequest | None
-    web_response: WebResponse | None
+    rule: Optional[ReportingDescriptorReference]
+    web_request: Optional[WebRequest]
+    web_response: Optional[WebResponse]
 
     def prepr(self):
         rule = self.rule_id or (self.rule.id if self.rule else '') or None
@@ -168,9 +169,9 @@ class Tool:
 @define(field_transformer=_combine)
 class Run:
     tool: Tool
-    results: list[Result] | None
-    invocations: list[Invocation] | None
-    taxonomies: list[ToolComponent] | None
+    results: Optional[list[Result]]
+    invocations: Optional[list[Invocation]]
+    taxonomies: Optional[list[ToolComponent]]
 
     def __repr__(self):
         return ',\n'.join((
