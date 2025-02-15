@@ -37,6 +37,27 @@ REQUEST_LINE_P = re.compile(r'^(\w+) (.*) (\S+)')  # <method> <request-target> <
 RESPONSE_LINE_P = re.compile(r'^(\S+) (\w+) (\w+)')  # <protocol> <status-code> <status-text>
 
 
+# To be removed after
+def _back_compat_trick(web_rr_parse_func):
+    """Wrapper for http request/response coverter."""
+    def foo(zhdr, zbody):
+        """Preprocess headers+body stored as single string in body."""
+        if zbody and not zhdr:
+            if '\r\n' in zbody and (maybe_start_line := zbody[:zbody.index('\r\n')].replace('\n', ' ')):
+                zbody = maybe_start_line + zbody[zbody.index('\r\n'):]
+            lines = zbody.splitlines(keepends=False)
+            try:
+                e_o_hdr = lines.index('')
+            except ValueError:
+                return web_rr_parse_func(zhdr, zbody)
+            else:
+                return web_rr_parse_func('\r\n'.join(lines[:e_o_hdr]), '\r\n'.join(lines[e_o_hdr+1:]))
+        else:
+            return web_rr_parse_func(zhdr, zbody)
+    return foo
+
+
+@_back_compat_trick
 def _web_request(zhdr, zbody):
     r = WebRequest()
     raw_data = dict()
@@ -76,6 +97,7 @@ def _web_request(zhdr, zbody):
     return r
 
 
+@_back_compat_trick
 def _web_response(zhdr, zbody, no_response=False):
     r = WebResponse()
     raw_data = dict()
