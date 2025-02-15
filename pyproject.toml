@@ -7,7 +7,7 @@ name = "zreprt"
 description = "ZAP-like reporting library"
 readme = "README.md"
 license = {file = "LICENSE"}  # Keep in sync with classifiers/license!
-keywords = ["zap", "report", "reporting"]
+keywords = ["dast", "zap", "sarif", "report", "reporting"]
 
 dynamic = ["version"]
 
@@ -28,12 +28,14 @@ dependencies = [
   "attrs",
   "cattrs",
   "python-dateutil",
+  "sarif-om",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest",
     "hypothesis",
+    "sarif-tools",
 ]
 
 [project.urls]

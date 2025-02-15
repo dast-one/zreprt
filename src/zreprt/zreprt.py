@@ -26,9 +26,9 @@ from cattrs.gen import make_dict_structure_fn, make_dict_unstructure_fn, overrid
 from cattrs.preconf.json import make_converter
 
 
-def _clns(s, p=re.compile(r'</?p>')):
+def _clns(s, p=re.compile(r'</?p>(\s*</?p>)*')):
     """Clear single string of extra html tags."""
-    return p.sub('', s)
+    return p.sub('\n', s)
 
 
 _zlike_conv = make_converter(prefer_attrib_converters=True)
